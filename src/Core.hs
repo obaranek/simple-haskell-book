@@ -138,8 +138,11 @@ collectLogs :: Docker.Service
     -> Build 
     -> IO (LogCollection, [Log])
 collectLogs docker collection build = do
-    undefined --TODO
-    
+  now <- Time.getPOSIXTime
+  logs <- runCollection docker now collection
+  let newCollection = updateCollection build.state now collection
+  pure ( newCollection, logs )
+
 initLogCollection :: Pipeline -> LogCollection 
 initLogCollection pipeline =
     Map.fromList $ NonEmpty.toList steps
@@ -171,8 +174,23 @@ updateCollection state lastCollection collection =
                 CollectionFinished
 
 runCollection
-    :: Docker.Service 
+    :: Docker.Service
+    -> Time.POSIXTime
     -> LogCollection
     -> IO [Log]
-runCollection docker collection = do
-    undefined -- TODO
+runCollection docker collectUntil collection = do
+  logs <- Map.traverseWithKey f collection
+  pure $ concat (Map.elems logs)
+  where
+    f step = \case
+      CollectionReady -> pure []
+      CollectionFinished -> pure []
+      CollectingLogs container since -> do
+        let options =
+              Docker.FetchLogsOptions
+                {container = container,
+                since = since,
+                until = collectUntil
+                }
+        output <- docker.fetchLogs options
+        pure [Log { step = step, output = output }]
