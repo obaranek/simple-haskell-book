@@ -7,18 +7,19 @@ import RIO.Map as Map
 import qualified RIO.NonEmpty as NonEmpty
 import qualified RIO.Text as Text
 import qualified Data.Time.Clock.POSIX as Time
+import qualified Data.Aeson as Aeson
 
 data Pipeline = Pipeline
   { steps :: NonEmpty Step
   }
-  deriving (Eq, Show)
+  deriving (Eq, Show,Generic, Aeson.FromJSON)
 
 data Step = Step
   { name :: StepName,
     commands :: NonEmpty Text,
     image :: Docker.Image
   }
-  deriving (Eq, Show)
+  deriving (Eq, Show,Generic, Aeson.FromJSON)
 
 data Build = Build
   { pipeline :: Pipeline,
@@ -29,7 +30,7 @@ data Build = Build
   deriving (Eq, Show)
 
 newtype StepName = StepName Text
-  deriving (Eq, Show, Ord)
+  deriving (Eq, Show, Ord, Generic, Aeson.FromJSON)
 
 stepNameToText :: StepName -> Text
 stepNameToText (StepName step) = step
@@ -69,6 +70,7 @@ progress docker build =
                     script = script,
                     volume = build.volume
                   }
+          docker.pullImage step.image
           container <- docker.createContainer options
           docker.startContainer container
           let s =
@@ -194,3 +196,9 @@ runCollection docker collectUntil collection = do
                 }
         output <- docker.fetchLogs options
         pure [Log { step = step, output = output }]
+
+newtype BuildNumber = BuildNumber Int
+  deriving (Eq, Show)
+
+buildNumberToInt :: BuildNumber -> Int
+buildNumberToInt (BuildNumber n) = n

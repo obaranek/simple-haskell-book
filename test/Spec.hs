@@ -9,6 +9,7 @@ import qualified Runner
 import qualified System.Process.Typed as Process
 import qualified RIO.Set as Set
 import qualified RIO.ByteString as ByteString
+import qualified Data.Yaml as Yaml
 import Test.Hspec
 
 -- Helper functions
@@ -17,7 +18,7 @@ makeStep :: Text -> Text -> [Text] -> Step
 makeStep name image commands =
   Step
     { name = StepName name,
-      image = Docker.Image image,
+      image = Docker.Image { name = image, tag = "latest" },
       commands = NonEmpty.Partial.fromList commands
     }
 
@@ -64,6 +65,10 @@ main = hspec do
         testSharedWorkspace docker runner
       it "should collect logs" do
         testLogCollection runner
+      it "should pull images" do
+        testImagePull runner
+      it "should decode pipleines" do
+        testYamlDecoding runner
     
 cleanupDocker :: IO ()
 cleanupDocker = void do
@@ -121,3 +126,22 @@ testLogCollection runner = do
   result.state `shouldBe` BuildFinished BuildSucceeded
   Map.elems result.completedSteps `shouldBe` [StepSucceeded, StepSucceeded]
   readMVar expected >>= \logs -> logs `shouldBe` Set.empty
+
+testImagePull :: Runner.Service -> IO ()
+testImagePull runner = do
+  Process.readProcessStdout "docker rmi -f busybox"
+
+  build <- runner.prepareBuild $ makePipeline
+             [makeStep "First step" "busybox" ["date"]
+             ]
+  result <- runner.runBuild emptyHooks build
+
+  result.state `shouldBe` BuildFinished BuildSucceeded
+  Map.elems result.completedSteps `shouldBe` [StepSucceeded]
+
+testYamlDecoding :: Runner.Service -> IO ()
+testYamlDecoding runner = do
+  pipeline <- Yaml.decodeFileThrow "test/pipeline.sample.yml"
+  build <- runner.prepareBuild pipeline
+  result <- runner.runBuild emptyHooks build
+  result.state `shouldBe` BuildFinished BuildSucceeded

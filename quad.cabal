@@ -10,8 +10,10 @@ build-type:     Simple
 
 library
   exposed-modules:
+      Agent
       Core
       Docker
+      JobHandler
       Runner
       Socket
   other-modules:
