@@ -15,6 +15,7 @@ library
       Docker
       JobHandler
       Runner
+      Server
       Socket
   other-modules:
       Paths_quad

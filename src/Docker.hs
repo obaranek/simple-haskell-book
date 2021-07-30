@@ -11,6 +11,7 @@ import qualified Data.Time.Clock.POSIX as Time
 import qualified Data.Aeson as Aeson
 import qualified RIO.Text as Text
 import qualified RIO.Text.Partial as Text.Partial
+import qualified Codec.Serialise as Serialise
 
 parseResponse ::
   HTTP.Response ByteString ->
@@ -59,13 +60,13 @@ createContainer_ makeReq options = do
   parseResponse res parser
 
 newtype ContainerExitCode = ContainerExitCode Int
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, Serialise.Serialise)
 
 exitCodeToInt :: ContainerExitCode -> Int
 exitCodeToInt (ContainerExitCode code) = code
 
 newtype ContainerId = ContainerId Text
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, Serialise.Serialise)
 
 containerIdToText :: ContainerId -> Text
 containerIdToText (ContainerId c) = c
@@ -137,7 +138,7 @@ containerStatus_ makeReq container = do
   parseResponse res parser
 
 newtype Volume = Volume Text
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, Serialise.Serialise)
 
 volumeToText :: Volume -> Text
 volumeToText (Volume v) = v
@@ -181,7 +182,7 @@ fetchLogs_ makeReq options = do
   pure $ HTTP.getResponseBody res
 
 data Image = Image { name :: Text, tag :: Text }
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, Serialise.Serialise)
 
 imageToText :: Image -> Text
 imageToText image = image.name <> ":" <> image.tag

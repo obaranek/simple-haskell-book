@@ -1,8 +1,8 @@
 -- |
-import qualified Agent
 
 module JobHandler where
 
+import qualified Agent
 import RIO
 import Core
 
@@ -21,7 +21,8 @@ data JobState
   deriving (Eq, Show)
 
 data Service
-  = { queueJob :: Pipeline -> IO BuildNumber
+  = Service{ queueJob :: Pipeline -> IO BuildNumber
     , dispatchCmd :: IO (Maybe Agent.Cmd)
     , processMsg :: Agent.Msg -> IO ()
+    , findJob :: BuildNumber -> IO (Maybe Job)
     }
