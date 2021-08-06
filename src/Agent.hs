@@ -8,6 +8,7 @@ import Core
 import qualified Codec.Serialise as Serialise
 import qualified Network.HTTP.Simple as HTTP
 import qualified Runner
+import qualified System.Log.Logger as Logger
 
 data Cmd
   = StartBuild BuildNumber Pipeline
@@ -28,6 +29,9 @@ run config runner = forever do
   let cmd = Serialise.deserialise (HTTP.getResponseBody res) :: Maybe Cmd
 
   traverse_ (runCommand runner) cmd
+    `catch` \e -> do
+      Logger.warningM "quad.agent" "Server offline, waiting..."
+      Logger.warningM "quad.agent" $ show (e :: HTTP.HttpException)
 
   threadDelay(1 * 1000 * 1000)
 
@@ -42,6 +46,7 @@ runCommand runner = \case
   StartBuild number pipeline -> do
     let hooks = Runner.Hooks
           { logCollected = traceShowIO --TODO
+          , buildUpdated = traceShowIO
           }
 
     build <- runner.prepareBuild pipeline

@@ -199,7 +199,7 @@ runCollection docker collectUntil collection = do
         pure [Log { step = step, output = output }]
 
 newtype BuildNumber = BuildNumber Int
-  deriving (Eq, Show, Generic, Serialise.Serialise)
+  deriving (Eq, Show, Generic, Serialise.Serialise, Ord)
 
 buildNumberToInt :: BuildNumber -> Int
 buildNumberToInt (BuildNumber n) = n

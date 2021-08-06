@@ -15,6 +15,7 @@ import qualified Agent
 import qualified Server
 import qualified JobHandler
 import qualified Control.Concurrent.Async as Async
+import qualified JobHandler.Memory
 
 -- Helper functions
 
@@ -154,20 +155,28 @@ testYamlDecoding runner = do
 
 testServerAndAgent :: Runner.Service -> IO ()
 testServerAndAgent runner = do
-  let handler = undefined :: JobHandler.Service  --TODO
+  handler <- JobHandler.Memory.createService
 
-  void $ Async.async do
+
+  serverThread <- Async.async do
     Server.run (Server.Config 9000) handler
 
-  void $ Async.async do
+  Async.link serverThread
+
+  agentThread <- Async.async do
     Agent.run (Agent.Config "http://localhost:9000") runner
+
+  Async.link agentThread
+
 
   let pipeline = makePipeline
         [ makeStep "agent-test" "busybox" ["echo hello", "echo from agent"] ]
 
   number <- handler.queueJob pipeline
   checkBuild handler number
-  pure ()
+
+  Async.cancel serverThread
+  Async.cancel agentThread
 
 checkBuild :: JobHandler.Service -> BuildNumber -> IO ()
 checkBuild handler number = loop
